@@ -17,6 +17,16 @@ static void done(void) {
     }
 }
 
+static int strlen(char* str){
+    int i;
+    while (*str){
+        i++;
+        *str++;
+    }
+
+    return i;
+}
+
 // The following will be our kernel's entry point.
 void _start(void) {
     // Ensure we have a terminal
@@ -28,7 +38,9 @@ void _start(void) {
     // a simple "Hello World" to screen.
     struct limine_terminal *terminal = terminal_request.response->terminals[0];
 
-    terminal_request.response->write(terminal, "Hello World!", 12);
+    #define print(terminal, str) terminal_request.response->write(terminal, str, strlen(str));
+
+    print(terminal, "Hello, how are you doing today?");
 
     // We're done, just hang...
     done();
