@@ -92,6 +92,10 @@ $(KERNEL): $(OBJ)
 -include $(HEADER_DEPS)
 
 # Compilation rules for *.c files.
+%.o: %.cpp limine.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+# Compilation rules for *.c files.
 %.o: %.c limine.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 

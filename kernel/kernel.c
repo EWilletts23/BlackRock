@@ -38,9 +38,11 @@ void _start(void) {
     // a simple "Hello World" to screen.
     struct limine_terminal *terminal = terminal_request.response->terminals[0];
 
-    #define print(terminal, str) terminal_request.response->write(terminal, str, strlen(str));
+    #define print(str) terminal_request.response->write(terminal, str, strlen(str));
 
-    print(terminal, "Hello, how are you doing today?");
+    print("Hello, how are you doing today?\n");
+    print("Im ok thanks! How about you?\n");
+    print("Im gooded :)\n");
 
     // We're done, just hang...
     done();
