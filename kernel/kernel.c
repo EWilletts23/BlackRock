@@ -40,9 +40,17 @@ void _start(void) {
 
     #define print(str) terminal_request.response->write(terminal, str, strlen(str));
 
-    print("Hello, how are you doing today?\n");
-    print("Im ok thanks! How about you?\n");
-    print("Im gooded :)\n");
+
+
+
+    volatile struct limine_framebuffer_request framebuffer_request = {
+        .id = LIMINE_TERMINAL_REQUEST,
+        .revision = 0
+    };
+
+    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+
+    print(framebuffer_request.response->framebuffer_count);
 
     // We're done, just hang...
     done();
