@@ -10,6 +10,7 @@
         "memory.h": "c",
         "*.tcc": "c",
         "__locale": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "compare": "c"
     }
 }

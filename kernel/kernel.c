@@ -250,7 +250,7 @@ void _start(Framebuffer* framebuffer, PSF1_FONT* psf1_font) {
     struct limine_kernel_address_response *ka_response = kernel_address_request.response;
 
 
-    e9_printf("\x1b[41m\x1b[37mKernel Info:\x1b[0m\x1b[37m\n");
+    e9_printf("\x1b[41m\x1b[37mKernel Info:\x1b[0m\x1b[37m");
     e9_printf("Kernel address feature, revision %d", ka_response->revision);
     e9_printf("Physical base: %x", ka_response->physical_base);
     e9_printf("Virtual base: %x", ka_response->virtual_base);
@@ -297,15 +297,14 @@ void _start(Framebuffer* framebuffer, PSF1_FONT* psf1_font) {
     }
 
     // LOAD PSF1_FONT
-
-    e9_print("Initialising PSF Font...\n");
+    e9_printf("");
+    e9_printf("Initialising PSF Font...");
 
     PSF1_FONT psf1_Font;
-    
     {
         const char* fontPath = "fonts/zap-light16.psf";
 
-        e9_printf("Locating PSF Font: \"%s\"\n", fontPath);
+        e9_printf("Locating PSF Font: \"%s\"", fontPath);
 
         struct limine_file* file = getFile(fontPath);
 
@@ -325,7 +324,7 @@ void _start(Framebuffer* framebuffer, PSF1_FONT* psf1_font) {
 
         psf1_Font.glyphBuffer = (void*)((uint64_t)file->address + sizeof(PSF1_HEADER));
 
-        e9_printf("PSF Font Initialised\n");
+        e9_printf("PSF Font Initialised");
 
     }
 
@@ -333,7 +332,7 @@ void _start(Framebuffer* framebuffer, PSF1_FONT* psf1_font) {
         uint64_t mallocDiff = (uint64_t)startRAMAddr - (uint64_t)freeMemoryStart;
         
         e9_printf("");
-        e9_printf("Debug RAM Statistics");
+        e9_printf("\x1b[41m\x1b[37mRAM Info:\x1b[0m\x1b[37m");
         e9_printf("%x (NOW) - %x (START) = %d bytes malloced", (uint64_t)startRAMAddr, (uint64_t)freeMemoryStart, mallocDiff);
         e9_printf("");
 
@@ -342,15 +341,12 @@ void _start(Framebuffer* framebuffer, PSF1_FONT* psf1_font) {
     }
 
     e9_printf("Kernel Start: %x (Size: %d Bytes)", (uint64_t)kernelStart, kernelSize);
-
     e9_printf("");
-
-    e9_printf("> OS has %d MB of RAM. (Starts at %x)", freeMemorySize / 1000000, (uint64_t)freeMemoryStart);
-
+    e9_printf("%d MB of RAM free. (Starts at %x)", freeMemorySize / 1000000, (uint64_t)freeMemoryStart);
+    e9_printf("");
     e9_printf("Boot calls initiated!");
-    // bootTest(fb, &psf1_Font, startRAMAddr, freeMemoryStart, freeMemorySize, kernelStart, kernelSize, kernelStartVirtual);
     
-    //done();
+    bootTest(fb, &psf1_Font, startRAMAddr, freeMemoryStart, freeMemorySize, kernelStart, kernelSize, kernelStartVirtual);
 
     done();
 }
