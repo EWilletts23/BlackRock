@@ -1,57 +1,62 @@
+/*
+ *  The Main GoGX Operating system Kernel
+ *  Main script goes here
+ *  Author: pradosh-arduino / helloImPR#6776
+ *  Project: Started: 1/8/22 Github: 3/8/22
+ */
+
+// includes
 #include <stdint.h>
 #include <stddef.h>
 #include <limine.h>
 
-// The Limine requests can be placed anywhere, but it is important that
-// the compiler does not optimise them away, so, usually, they should
-// be made volatile or equivalent.
+#include "strings/strings.h"
 
+// Limine terminal 
 static volatile struct limine_terminal_request terminal_request = {
     .id = LIMINE_TERMINAL_REQUEST,
     .revision = 0
 };
 
+struct limine_framebuffer_request framebuffer_request = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0, .response = NULL
+};
+
+struct limine_module_request module_request = {
+    .id = LIMINE_MODULE_REQUEST,
+    .revision = 0, .response = NULL
+};
+
+// We need to halt if not limine will bootloop
 static void done(void) {
     for (;;) {
-        __asm__("hlt");
+    
     }
 }
 
-static int strlen(char* str){
-    int i;
-    while (*str){
-        i++;
-        *str++;
-    }
-
-    return i;
-}
-
-// The following will be our kernel's entry point.
+// Main start
 void _start(void) {
-    // Ensure we have a terminal
-    if (terminal_request.response == NULL || terminal_request.response->terminal_count < 1) {
-        done();
-    }
+    if (terminal_request.response == NULL || terminal_request.response->terminal_count < 1) done();
 
-    // We should now be able to call the Limine terminal to print out
-    // a simple "Hello World" to screen.
-    struct limine_terminal *terminal = terminal_request.response->terminals[0];
+    print("Blackrock\n\n");
 
-    #define print(str) terminal_request.response->write(terminal, str, strlen(str));
+    print("Initialising Framebuffer...\n");
 
+    struct limine_framebuffer_response *framebuffer_response = framebuffer_request.response;
+    struct limine_framebuffer *framebuffer = framebuffer_response->framebuffers[0];
 
+    print("Framebuffer Initialised\n\n");
+    e9_printf("\x1b[41m\x1b[37mFramebuffer Info:\x1b[0m\x1b[37m\n");
+    e9_printf("Address: %x\nWidth: %d\nHeight: %d\nPPSL: %d\nFramebuffer Count: %d\n", framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->edid, framebuffer_response->framebuffer_count);
 
-
-    volatile struct limine_framebuffer_request framebuffer_request = {
-        .id = LIMINE_TERMINAL_REQUEST,
-        .revision = 0
-    };
-
-    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
-
-    print(framebuffer_request.response->framebuffer_count);
-
-    // We're done, just hang...
+    ResetColours();
+ 
     done();
+}
+
+//Print Function
+void print(char msg[], ...){
+    struct limine_terminal *terminal = terminal_request.response->terminals[0];
+    terminal_request.response->write(terminal, msg, strlen(msg));
 }

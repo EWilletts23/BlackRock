@@ -1,6 +1,12 @@
 {
     "files.associations": {
         "stdint.h": "c",
-        "idt.h": "c"
+        "idt.h": "c",
+        "graphics.h": "c",
+        "keyboard.h": "c",
+        "hal.h": "c",
+        "colors.h": "c",
+        "e9print.h": "c",
+        "memory.h": "c"
     }
 }
