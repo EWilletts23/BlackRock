@@ -1,62 +1,188 @@
-/*
- *  The Main GoGX Operating system Kernel
- *  Main script goes here
- *  Author: pradosh-arduino / helloImPR#6776
- *  Project: Started: 1/8/22 Github: 3/8/22
- */
 
-// includes
+/*
+--------------------------
+INCLUDE FILES
+--------------------------
+*/
+
 #include <stdint.h>
 #include <stddef.h>
-#include <limine.h>
+#include "limine.h"
 
 #include "strings/strings.h"
+#include "graphics/e9print.h"
+#include "rendering/framebuffer.h"
 
-// Limine terminal 
+/*
+--------------------------
+LIMINE BOOTLOADER REQUESTS
+--------------------------
+*/
+
 static volatile struct limine_terminal_request terminal_request = {
     .id = LIMINE_TERMINAL_REQUEST,
     .revision = 0
 };
 
-struct limine_framebuffer_request framebuffer_request = {
+static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
-    .revision = 0, .response = NULL
+    .revision = 0,
+    .response = NULL
 };
 
-struct limine_module_request module_request = {
+static volatile struct limine_module_request module_request = {
     .id = LIMINE_MODULE_REQUEST,
-    .revision = 0, .response = NULL
+    .revision = 0,
+    .response = NULL
 };
+
+static volatile struct limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST,
+    .revision = 0
+};
+
+static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
+    .revision = 0
+};
+
+/*
+--------------------------
+SYSTEM CALLS
+--------------------------
+*/
+
+static void write_shim(const char *s, uint64_t l) {
+    struct limine_terminal *terminal = terminal_request.response->terminals[0];
+
+    terminal_request.response->write(terminal, s, l);
+}
+
+void print(char msg[], ...){
+    struct limine_terminal *terminal = terminal_request.response->terminals[0];
+    terminal_request.response->write(terminal, msg, strlen(msg));
+}
+
+typedef struct Framebuffer{
+	void* BaseAddress;
+	size_t BufferSize;
+	unsigned int Width;
+	unsigned int Height;
+	unsigned int PixelsPerScanLine;
+    unsigned int BufferCount;
+    unsigned int BytesPerPixel;
+};
+
+struct limine_file* getFile(const char* name) {
+    struct limine_module_response *module_response = module_request.response;
+    for (size_t i = 0; i < module_response->module_count; i++) {
+        struct limine_file *f = module_response->modules[i];
+        if (checkStringEndsWith(f->path, name))
+            return f;
+    }
+    return NULL;
+}
+
+#define PSF1_MAGIC0 0x36;
+#define PSF1_MAGIC1 0x04;
+
+typedef struct {
+    unsigned char magic[2];
+    unsigned char mode;
+    unsigned char charsize;
+} PSF1_HEADER;
+
+typedef struct
+{
+    PSF1_HEADER* psf1_Header;
+    void* glyphBuffer;
+} PSF1_FONT;
+
+PSF1_Font* LoadPSF1Font() {
+
+}
 
 // We need to halt if not limine will bootloop
 static void done(void) {
+    print("\n\nSystem Halted");
     for (;;) {
     
     }
 }
 
-// Main start
+/*
+--------------------------
+KERNEL SCRIPT
+--------------------------
+*/
+
 void _start(void) {
-    if (terminal_request.response == NULL || terminal_request.response->terminal_count < 1) done();
+    if (terminal_request.response == NULL || terminal_request.response->terminal_count < 1) {
+        done();
+    }
+
+    limine_print = write_shim;
 
     print("Blackrock\n\n");
 
+
+    // INITALISE FRAMEBUFFER
+    
     print("Initialising Framebuffer...\n");
 
     struct limine_framebuffer_response *framebuffer_response = framebuffer_request.response;
     struct limine_framebuffer *framebuffer = framebuffer_response->framebuffers[0];
 
-    print("Framebuffer Initialised\n\n");
-    e9_printf("\x1b[41m\x1b[37mFramebuffer Info:\x1b[0m\x1b[37m\n");
-    e9_printf("Address: %x\nWidth: %d\nHeight: %d\nPPSL: %d\nFramebuffer Count: %d\n", framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->edid, framebuffer_response->framebuffer_count);
+    if (framebuffer_request.response == NULL || framebuffer_request.response->framebuffer_count < 1) {
+        print("\nError!\n");
+        print("Framebuffer = NULL\n");
+        done();
+    } else {
+        print("Framebuffer Initialised\n\n");
+    }
 
-    ResetColours();
- 
+    framebuffer->bpp = 4;
+
+    Framebuffer fb;
+    fb.BaseAddress = framebuffer->address;
+    fb.Width = framebuffer->width;
+    fb.Height = framebuffer->height;
+    fb.PixelsPerScanLine = framebuffer->pitch / 4;
+    fb.BufferSize = framebuffer->height * framebuffer->pitch;
+    fb.BufferCount = framebuffer_response->framebuffer_count;
+    fb.BytesPerPixel = framebuffer->bpp;
+
+
+    // SHOW FRAMEBUFFER INFO
+
+    e9_printf("\x1b[41m\x1b[37mFramebuffer Info:\x1b[0m\x1b[37m\nAddress: %x\nWidth: %d\nHeight: %d\nPPSL: %d\nFramebuffer Count: %d\nBPP: %d", fb.BaseAddress, fb.Width, fb.Height, fb.PixelsPerScanLine, fb.BufferCount, fb.BytesPerPixel);
+
+    unsigned int y = 50;
+
+    for (unsigned int x = 0; x < fb.Width / 2 * fb.BytesPerPixel; x+=fb.BytesPerPixel) {
+        *(unsigned int*)(x + (y * fb.PixelsPerScanLine * fb.BytesPerPixel) + fb.BaseAddress) = 0xff0000ff;
+    }
+
+    // LOAD PSF1_FONT
+
+    PSF1_FONT psf1_Font;
+    {
+        const char* fName = "zap-light16.psf";
+        struct limine_file* file = getFile(fName);
+        if (file == NULL){
+            e9_printf("> Failed to get Font \"%s\"!", fName);
+            done();
+        }
+
+        psf1_Font.psf1_Header = (PSF1_HEADER*)file->address;
+        if (psf1_Font.psf1_Header->magic[0] != 0x36 || psf1_Font.psf1_Header->magic[1] != 0x04)
+        {
+            e9_printf("> FONT HEADER INVALID!");
+            done();
+        }
+
+        psf1_Font.glyphBuffer = (void*)((uint64_t)file->address + sizeof(PSF1_HEADER));
+    }
+
     done();
-}
-
-//Print Function
-void print(char msg[], ...){
-    struct limine_terminal *terminal = terminal_request.response->terminals[0];
-    terminal_request.response->write(terminal, msg, strlen(msg));
 }

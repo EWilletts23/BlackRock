@@ -7,6 +7,9 @@
         "hal.h": "c",
         "colors.h": "c",
         "e9print.h": "c",
-        "memory.h": "c"
+        "memory.h": "c",
+        "*.tcc": "c",
+        "__locale": "c",
+        "stddef.h": "c"
     }
 }
