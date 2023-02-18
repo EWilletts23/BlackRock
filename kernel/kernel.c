@@ -7,6 +7,8 @@ INCLUDE FILES
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+
 #include "limine.h"
 
 #include "strings/strings.h"
@@ -73,6 +75,41 @@ typedef struct Framebuffer{
     unsigned int BytesPerPixel;
 };
 
+bool checkStringEndsWith(const char* str, const char* end) {
+    const char* _str = str;
+    const char* _end = end;
+
+    while(*str != 0) {
+        str++;
+    }
+        
+    str--;
+
+    while(*end != 0) {
+        end++;
+    }
+        
+    end--;
+
+    while (true) {
+        if (*str != *end) { 
+            return false;
+        }
+
+        str--;
+        end--;
+
+        if (end == _end || (str == _str && end == _end)) {
+            return true;
+        }
+
+        if (str == _str){
+            return false;
+        }
+    }
+    return true;
+}
+
 struct limine_file* getFile(const char* name) {
     struct limine_module_response *module_response = module_request.response;
     for (size_t i = 0; i < module_response->module_count; i++) {
@@ -98,9 +135,6 @@ typedef struct
     void* glyphBuffer;
 } PSF1_FONT;
 
-PSF1_Font* LoadPSF1Font() {
-
-}
 
 // We need to halt if not limine will bootloop
 static void done(void) {
@@ -160,28 +194,30 @@ void _start(void) {
     unsigned int y = 50;
 
     for (unsigned int x = 0; x < fb.Width / 2 * fb.BytesPerPixel; x+=fb.BytesPerPixel) {
-        *(unsigned int*)(x + (y * fb.PixelsPerScanLine * fb.BytesPerPixel) + fb.BaseAddress) = 0xff0000ff;
+        *(unsigned int*)(x + (y * fb.PixelsPerScanLine * fb.BytesPerPixel) + fb.BaseAddress) = 0xff54043b;
     }
 
     // LOAD PSF1_FONT
 
     PSF1_FONT psf1_Font;
+    
     {
-        const char* fName = "zap-light16.psf";
-        struct limine_file* file = getFile(fName);
+        const char* fontPath = "fonts/zap-light16.psf";
+        struct limine_file* file = getFile(fontPath);
         if (file == NULL){
-            e9_printf("> Failed to get Font \"%s\"!", fName);
+            e9_printf("Failed to get Font \"%s\"!", fontPath);
             done();
         }
 
         psf1_Font.psf1_Header = (PSF1_HEADER*)file->address;
-        if (psf1_Font.psf1_Header->magic[0] != 0x36 || psf1_Font.psf1_Header->magic[1] != 0x04)
-        {
-            e9_printf("> FONT HEADER INVALID!");
+        if (psf1_Font.psf1_Header->magic[0] != 0x36 || psf1_Font.psf1_Header->magic[1] != 0x04) {
+            e9_printf("Font Header Invalid");
             done();
         }
 
         psf1_Font.glyphBuffer = (void*)((uint64_t)file->address + sizeof(PSF1_HEADER));
+
+        e9_printf("Font Loaded");
     }
 
     done();
