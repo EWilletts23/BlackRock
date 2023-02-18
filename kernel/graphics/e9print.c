@@ -3,8 +3,6 @@
 
 #include <stddef.h>
 
-void (*print)(const char *buf, size_t size) = NULL;
-
 static const char CONVERSION_TABLE[] = "0123456789abcdef";
 
 void e9_putc(char c) {
